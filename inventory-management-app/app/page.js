@@ -31,12 +31,61 @@ const style = {
 
 export default function Home() {
   // state variables
-  const [inventory, setInventory] = useState([])
-  const [open, setOpen] = useState(false)
-  const [itemName, setItemName] = useState('')
+const [inventory, setInventory] = useState([]);
+const [open, setOpen] = useState(false);
+const [itemName, setItemName] = useState('');
+// const [isDeleted, setIsDeleted] = useState(false);
+
+const updateInventory = async () => {
+  const snapshot = query(collection(firestore, 'pantry'))
+  const docs = await getDocs(snapshot)
+  const inventoryList = []
+  docs.forEach((doc) => {
+    inventoryList.push({ name: doc.id, ...doc.data() })
+  })
+  setInventory(inventoryList);
+};
+
   useEffect(() => {
-    updateInventory()
-  }, [])
+    updateInventory();
+  }, []);
+
+//to interact with Firestore to add or remove items and update our local state.
+  const addItem = async (item) => {
+     
+    item = item.charAt(0).toUpperCase() + item.toLowerCase().slice(1);
+    const docRef = doc(collection(firestore, 'pantry'), item)
+    const docSnap = await getDoc(docRef)
+    if (docSnap.exists()) {
+      const { quantity } = docSnap.data()
+      await setDoc(docRef, { quantity: quantity + 1 })
+    } else {
+      await setDoc(docRef, { quantity: 1 })
+    }
+    await updateInventory()
+  };
+  
+  const removeItem = async (item) => {
+    const docRef = doc(collection(firestore, 'pantry'), item)
+    const docSnap = await getDoc(docRef)
+    if (docSnap.exists()) {
+      const { quantity } = docSnap.data()
+      if (quantity === 1 ) {
+        await deleteDoc(docRef)
+        // setIsDeleted(true);
+      } else {
+        await setDoc(docRef, { quantity: quantity - 1 })
+      }
+    }
+    await updateInventory()
+  };
+  // if (isDeleted) {
+  //   return null; // Don't render anything if the item is deleted
+  // }
+  //for handling modal state
+  const handleOpen = () => setOpen(true)
+  const handleClose = () => setOpen(false)
+
   /* Box: React component, from UI libraryMaterial-UI
      Typography: control text styles. provides a variety of pre-defined styles
   */
@@ -63,7 +112,7 @@ export default function Home() {
             <Stack width="100%" direction={'row'} spacing={2}>
               <TextField
                 id="outlined-basic"
-                label="Item"
+                label="Type the item you want to add.."
                 variant="outlined"
                 fullWidth
                 value={itemName}
@@ -89,7 +138,7 @@ export default function Home() {
           <Box
             width="800px"
             height="100px"
-            bgcolor={'#ADD8E6'}
+            bgcolor={'#b08af2'}
             display={'flex'}
             justifyContent={'center'}
             alignItems={'center'}
@@ -107,11 +156,11 @@ export default function Home() {
                 display={'flex'}
                 justifyContent={'space-between'}
                 alignItems={'center'}
-                bgcolor={'#f0f0f0'}
+                bgcolor={'#c1f5c2'}
                 paddingX={5}
               >
                 <Typography variant={'h3'} color={'#333'} textAlign={'center'}>
-                  {name.charAt(0).toUpperCase() + name.slice(1)}
+                  {name.charAt(0).toUpperCase() + name.toLowerCase().slice(1)}
                 </Typography>
                 <Typography variant={'h3'} color={'#333'} textAlign={'center'}>
                   Quantity: {quantity}
@@ -125,45 +174,9 @@ export default function Home() {
         </Box>
       </Box>
     )
-}
-
-const updateInventory = async () => {
-  const snapshot = query(collection(firestore, 'pantry'))
-  const docs = await getDocs(snapshot)
-  const inventoryList = []
-  docs.forEach((doc) => {
-    inventoryList.push({ name: doc.id, ...doc.data() })
-  })
-  setInventory(inventoryList)
-}
+}//home
 
 
 
-const addItem = async (item) => {
-  const docRef = doc(collection(firestore, 'pantry'), item)
-  const docSnap = await getDoc(docRef)
-  if (docSnap.exists()) {
-    const { quantity } = docSnap.data()
-    await setDoc(docRef, { quantity: quantity + 1 })
-  } else {
-    await setDoc(docRef, { quantity: 1 })
-  }
-  await updateInventory()
-}
 
-const removeItem = async (item) => {
-  const docRef = doc(collection(firestore, 'pantry'), item)
-  const docSnap = await getDoc(docRef)
-  if (docSnap.exists()) {
-    const { quantity } = docSnap.data()
-    if (quantity === 1) {
-      await deleteDoc(docRef)
-    } else {
-      await setDoc(docRef, { quantity: quantity - 1 })
-    }
-  }
-  await updateInventory()
-}
 
-const handleOpen = () => setOpen(true)
-const handleClose = () => setOpen(false)
